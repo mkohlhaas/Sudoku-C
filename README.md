@@ -1,4 +1,5 @@
 Batch solve the most difficult Sudoku puzzles in the world:
 ```shell
-$ parallel ./sudoku :::: sudoku17.txt
+$ parallel --eta ./sudoku :::: sudoku17.txt > res.txt
+$ tail -f res.txt  # in a another shell
 ```
