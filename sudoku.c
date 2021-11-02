@@ -6,67 +6,113 @@
 #define N_DIGITS      (N_ROWS)
 #define QUADRANT_SIZE (N_ROWS / 3)
 #define GRID_SIZE     (N_ROWS * N_ROWS)
+#define PRINT_SEP      puts(" -------------------------")
 
 typedef int(Grid)[GRID_SIZE];
 
 void
-show(Grid x)
+show(Grid g)
 {
   for   (int row = 0; row < N_ROWS; row++) {
-    if  (!(row % QUADRANT_SIZE)) puts(" -------------------------");
+    if  (!(row % QUADRANT_SIZE)) PRINT_SEP;
     for (int col = 0; col < N_COLS; col++) {
-      if   (*x == 0) { printf(col % QUADRANT_SIZE ? "%2c" : " |%2c", ' '); x++; }
-      else           { printf(col % QUADRANT_SIZE ? "%2d" : " |%2d",  *x); x++; }
+      *g ? printf(col % QUADRANT_SIZE ? "%2d" : " |%2d", *g)
+         : printf(col % QUADRANT_SIZE ? "%2c" : " |%2c", ' ');
+      g++;
     }
     printf(" |\n"); 
   }
-  puts(" -------------------------");
+  PRINT_SEP;
 }
 
-// returns true if we can fill cells at pos and all
-// following cells or the whole grid is filled
 bool
-trycell(Grid x, int pos)
+all_cells_are_filled(Grid g)
 {
+  for (int i = 0; i < GRID_SIZE; i++) if (!g[i]) return false;
+  return true;
+}
+
+int
+number_of_filled_cells(Grid g, int pos)
+{
+  int n_filled_cells = 0;
+  int row            = pos / N_ROWS;
+  int col            = pos % N_COLS;
+
+  for (int i = 0; i < N_ROWS; i++)                                      // vertical
+    if (g[i * N_ROWS + col]) n_filled_cells++;
+
+  for (int j = 0; j < N_COLS; j++)                                      // horizontal
+    if (g[row * N_ROWS + j]) n_filled_cells++;
+
+  row = row / QUADRANT_SIZE * QUADRANT_SIZE;                            // calculate beginning of quadrant
+  col = col / QUADRANT_SIZE * QUADRANT_SIZE;
+  for   (int i = row; i < row + QUADRANT_SIZE; i++)                     // quadrant
+    for (int j = col; j < col + QUADRANT_SIZE; j++)
+      if (g[i * N_ROWS + j]) n_filled_cells++;
+
+  return n_filled_cells;
+}
+
+int
+most_promissing_cell(Grid g)
+{
+  int pos;
+  int max_n_cells = -1;
+  for (int i = 0; i < GRID_SIZE; i++) {
+    if (!g[i]) {
+      int n_filled_cells = number_of_filled_cells(g, i);
+      if (n_filled_cells > max_n_cells) {
+        pos         = i;
+        max_n_cells = n_filled_cells;
+      }
+    }
+  }
+  return pos;
+}
+
+int
+collect_used_digits(Grid g, int pos)
+{                                                                       //                                                                       987654321
+  int used = 0;                                                         // used flags every used digit in horizontal, vertical row, quadrant, eg 001101001 -> 1, 4, 6 and 7
   int row  = pos / N_ROWS;
   int col  = pos % N_COLS;
-  int used = 0;                                                      // used will flag every used digit in horizontal, vertical row or quadrant, e.g. 001101001 -> 1, 4, 6 and 7.
 
-  if (pos == GRID_SIZE) return true;                                 // we filled the whole grid
-  if (x[pos])           return trycell(x, pos + 1);                  // cell is already filled; try next cell
+  for (int i = 0; i < N_ROWS; i++)                                      // vertical
+    used |= 1 << (g[i * N_ROWS + col]);
 
-  {
-    // pos is empty
-    // now collect already used digits; result will be in used
-    for (int i = 0; i < N_ROWS; i++)
-      used |= 1 << (x[i * N_ROWS + col] - 1);                        // check vertical
+  for (int j = 0; j < N_COLS; j++)                                      // horizontal
+    used |= 1 << (g[row * N_ROWS + j]);
 
-    for (int j = 0; j < N_COLS; j++)
-      used |= 1 << (x[row * N_ROWS + j] - 1);                        // check horizontal
+  row = row / QUADRANT_SIZE * QUADRANT_SIZE;                            // calculate beginning of quadrant
+  col = col / QUADRANT_SIZE * QUADRANT_SIZE;
+  for   (int i = row; i < row + QUADRANT_SIZE; i++)                     // quadrant
+    for (int j = col; j < col + QUADRANT_SIZE; j++)
+      used |= 1 << (g[i * N_ROWS + j]);
 
-    row = row / QUADRANT_SIZE * QUADRANT_SIZE;                       // calculate beginning of quadrant
-    col = col / QUADRANT_SIZE * QUADRANT_SIZE;
-    for   (int i = row; i < row + QUADRANT_SIZE; i++)
-      for (int j = col; j < col + QUADRANT_SIZE; j++)
-        used |= 1 << (x[i * N_ROWS + j] - 1);                        // check quadrant
-  }
+  return used >> 1;
+}
 
-  for (x[pos] = 1; x[pos] <= N_DIGITS; x[pos]++, used >>= 1)         // set all digits from 1 to 9 in cell at pos
-    if (!(used & 1) && trycell(x, pos + 1)) return true;             // only try when digit not already used 
-
-  x[pos] = 0;                                                        // undo try and ...
-  return false;                                                      // ... return false
+bool
+is_grid_solvable(Grid g)
+{
+  if (all_cells_are_filled(g)) return true;                             // puzzle is (already) solved; nothing to do
+  int pos  = most_promissing_cell(g);
+  int used = collect_used_digits(g, pos);
+  for (g[pos] = 1; g[pos] <= N_DIGITS; g[pos]++, used >>= 1)            // set all digits from 1 to 9 in cell at pos
+    if (!(used & 1) && is_grid_solvable(g)) return true;                // try only when digit not already used 
+  g[pos] = 0;                                                           // undo tries and ...
+  return false;                                                         // ... return false
 }
 
 void
-solve(const char* s)
+solve(char const* const s)
 {
-  Grid x;
-  for (int i = 0; i < GRID_SIZE; i++) x[i] = s[i] - '0';             // convert input to digits
-
-  show(x);
-  if   (trycell(x, 0)) show(x);
-  else                 puts("no solution");
+  Grid g;
+  for (int i = 0; i < GRID_SIZE; i++) g[i] = s[i] - '0';                // convert input to digits
+  show(g);
+  if   (is_grid_solvable(g)) show(g);
+  else                       puts("no solution");
 }
 
 int
