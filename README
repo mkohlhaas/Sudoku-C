@@ -1,1 +1,0 @@
-`$ parallel ./sudoku :::: sudoku17.txt`
