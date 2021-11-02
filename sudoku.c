@@ -72,7 +72,7 @@ most_promissing_cell(Grid g)
 }
 
 int
-collect_used_digits(Grid g, int pos)
+used_digits(Grid g, int pos)
 {                                                                       //                                                                       987654321
   int used = 0;                                                         // used flags every used digit in horizontal, vertical row, quadrant, eg 001101001 -> 1, 4, 6 and 7
   int row  = pos / N_ROWS;
@@ -98,7 +98,7 @@ is_grid_solvable(Grid g)
 {
   if (all_cells_are_filled(g)) return true;                             // puzzle is (already) solved; nothing to do
   int pos  = most_promissing_cell(g);
-  int used = collect_used_digits(g, pos);
+  int used = used_digits(g, pos);
   for (g[pos] = 1; g[pos] <= N_DIGITS; g[pos]++, used >>= 1)            // set all digits from 1 to 9 in cell at pos
     if (!(used & 1) && is_grid_solvable(g)) return true;                // try only when digit not already used 
   g[pos] = 0;                                                           // undo tries and ...
@@ -116,15 +116,8 @@ solve(char const* const s)
 }
 
 int
-main()
+main(int argc, char** argv)
 {
-  solve("000000010"
-        "400000000"
-        "020000000"
-        "000050407"
-        "008000300"
-        "001090000"
-        "300400200"
-        "050100000"
-        "000806000");
+  if   (argc != 2) printf("Please provide a sudoku puzzle, e.g. '$ ./%s 000000010400000000020000000000050407008000300001090000300400200050100000000806000'\n", argv[0]);
+  else             solve(argv[1]);
 }
