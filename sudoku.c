@@ -41,45 +41,6 @@ all_cells_are_filled(Grid g)
 }
 
 int
-number_of_filled_cells(Grid g, Position pos)
-{
-  int n_filled_cells = 0;
-  int row            = pos / N_ROWS;
-  int col            = pos % N_COLS;
-
-  for (int i = 0; i < N_ROWS; i++)                                        // vertical
-    if (g[i * N_ROWS + col]) n_filled_cells++;
-
-  for (int j = 0; j < N_COLS; j++)                                        // horizontal
-    if (g[row * N_ROWS + j]) n_filled_cells++;
-
-  row = row / QUADRANT_SIZE * QUADRANT_SIZE;                              // calculate beginning of quadrant
-  col = col / QUADRANT_SIZE * QUADRANT_SIZE;
-  for   (int i = row; i < row + QUADRANT_SIZE; i++)                       // quadrant
-    for (int j = col; j < col + QUADRANT_SIZE; j++)
-      if (g[i * N_ROWS + j]) n_filled_cells++;
-
-  return n_filled_cells;
-}
-
-Position
-most_promissing_cell(Grid g)
-{
-  Position res;
-  int max_n_cells = -1;
-  for (Position pos = 0; pos < GRID_SIZE; pos++) {
-    if (!g[pos]) {
-      int n_filled_cells = number_of_filled_cells(g, pos);
-      if (n_filled_cells > max_n_cells) {
-        res         = pos;
-        max_n_cells = n_filled_cells;
-      }
-    }
-  }
-  return res;
-}
-
-int
 used_digits(Grid g, int pos)
 {                                                                         //                                                                       987654321
   int used = 0;                                                           // used flags every used digit in horizontal, vertical row, quadrant, eg 001101001 -> 1, 4, 6 and 7
@@ -99,6 +60,25 @@ used_digits(Grid g, int pos)
       used |= 1 << (g[i * N_ROWS + j]);
 
   return used >> 1;
+}
+
+Position
+most_promissing_cell(Grid g)
+{
+  Position res;
+  int max_used = -1;
+  for (Position pos = 0; pos < GRID_SIZE; pos++) {
+    if (!g[pos]) {
+      int count = 0;
+      int used  = used_digits(g, pos);
+      for (int i = 0; i < 9; i++) { if (used & 1) count++; used >>= 1; }
+      if (count > max_used) {
+        res      = pos;
+        max_used = count;
+      }
+    }
+  }
+  return res;
 }
 
 bool
